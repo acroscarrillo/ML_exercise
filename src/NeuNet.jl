@@ -17,11 +17,11 @@ end
 
 function propagate(net::NeuNet, input::Vector, activation::Function)
     if length(input) != net.layer_arch[1]
-        error(string("Input data of size ",length(input)," is incompatible with input layer of size ",length(net.layer_arch[0])))
+        error( string( "Input data of size ",length(input)," is incompatible with input layer of size ",net.layer_arch[1] ) )
     end
     previous_layer = input
     for i in 1:length(net.weights)
-        previous_layer = activation.( transpose(net.weights[i])*previous_layer + net.biases[i] )
+        previous_layer = activation.( transpose(net.weights[i])*previous_layer + net.biases[i+1] )
     end
     return previous_layer
 end
@@ -29,6 +29,7 @@ end
 function sigmoid(x::Real)
     return  1.0 / (1.0 + exp(-x))
 end
+
 
 function cost(real_output, expected_output)
     
