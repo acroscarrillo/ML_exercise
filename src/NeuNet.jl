@@ -45,21 +45,22 @@ end
 
 function back_prop(net::NeuNet, input::Vector, output_e::Vector, activation::Function, activation_d::Function,learning_rate::Real)
     layer_actv = propagate(net,input,activation)
-    grad = transpose((layer_actv[end]- output_e))
+    layer_actv_D = [sigmoid_d.(x) for x in layer_actv]
 
-    sigma_tilda = activation_d.(transpose(net.weights[end])*layer_actv[end-1] + net.biases[end])
-    Del = grad*(sigma_tilda.*delta_rec( net.layer_arch[end], net.layer_arch[end] ) )
-    net.biases[end]  = net.biases[end] - learning_rate*(transpose(Del))
+    grad = transpose( layer_actv[end]- output_e )
 
-    
+    Del_b = grad*( layer_actv_D[end].*delta_rec( net.layer_arch[end], net.layer_arch[end] ) )
+    net.biases[end]  = net.biases[end] - learning_rate*(transpose(Del_b))
+    Del_w = kron(layer_actv[end-1], Del_b)
+    net.weights[end] = net.weights[end] - learning_rate*(Del_w)
     
     for i=length(net.layer_arch)-2:-1:1
-        sigma_tilda = activation_d.(transpose(net.weights[i+1])*layer_actv[i+1] + net.biases[i+1])
-        grad = grad*(sigma_tilda.*transpose(net.weights[i+1]))
+        grad = grad*(layer_actv_D[i+2].*transpose(net.weights[i+1]))
 
-        sigma_tilda = activation_d.(transpose(net.weights[i])*layer_actv[i] + net.biases[i])
-        Del = grad*((sigma_tilda.*delta_rec( size(sigma_tilda)...,size(sigma_tilda)...)  ) )
-        net.biases[i]  = net.biases[i] - learning_rate*((transpose(Del)))
+        Del_b = grad*(( layer_actv_D[i+1].*delta_rec( size( layer_actv_D[i+1] )...,size( layer_actv_D[i+1] )...)  ) )
+        net.biases[i]  = net.biases[i] - learning_rate*((transpose(Del_b)))
+        Del_w = kron(layer_actv[i], Del_b)
+        net.weights[i] = net.weights[i] - learning_rate*(Del_w)
     end
 end
 
