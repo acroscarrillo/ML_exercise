@@ -1,11 +1,11 @@
 using LinearAlgebra
 using BenchmarkTools
 
-struct NeuNet
-    name::String
-    layer_arch::Vector{Int}
-    weights::Vector{Matrix{Float32}}
-    biases::Vector{Vector{Float32}}
+struct NeuNet{W,B}
+	name::String
+	layer_arch::Vector{Int}
+	weights::W
+	biases::B
 end
 
 #to do: initialise weights and biases with the catalan's algorithm
@@ -18,7 +18,7 @@ function NeuNet(name::String, layer_arch::Vector{Int})
 	return NeuNet(name, layer_arch, weights, biases)
 end
 
-function propagate(net::NeuNet, input::Vector, activation::Function)
+function propagate(net::NeuNet, input, activation::Function)
     if length(input) != net.layer_arch[1]
         error( string( "Input data of size ",length(input)," is incompatible with input layer of size ",net.layer_arch[1],"." ) )
     end
@@ -30,11 +30,11 @@ function propagate(net::NeuNet, input::Vector, activation::Function)
     return layer_actv
 end
 
-function sigmoid(x::Real)
+function sigmoid(x)
     return  1.0 / (1.0 + exp(-x))
 end
 
-function sigmoid_d(x::Real)
+function sigmoid_d(x)
     return  (1-sigmoid(x))*sigmoid(x)
 end
 
@@ -44,7 +44,7 @@ function delta_rec(n,m)
     return aux_mat
 end
 
-function back_prop(net::NeuNet, input::Vector, output_e::Vector, activation::Function, activation_d::Function,learning_rate::Real)
+function back_prop(net::NeuNet, input, output_e, activation::Function, activation_d::Function,learning_rate::Real)
     layer_actv = propagate(net,input,activation)
     layer_actv_D = [sigmoid_d.(x) for x in layer_actv]
 
