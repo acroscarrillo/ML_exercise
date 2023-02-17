@@ -1,6 +1,6 @@
 using LinearAlgebra
 using BenchmarkTools
-using CUDA
+using Metal
 
 struct NeuNet{W,B}
 	name::String
@@ -9,8 +9,8 @@ struct NeuNet{W,B}
 	biases::B
 end
 
-function cuda(net::NeuNet)
-	return NeuNet(net.name, net.layer_arch, CuArray.(net.weights), CuArray.(net.biases))
+function mtl(net::NeuNet)
+	return NeuNet(net.name, net.layer_arch, MtlArray.(net.weights), MtlArray.(net.biases))
 end
 
 function NeuNet(name::String, layer_arch::Vector{Int})
@@ -34,11 +34,11 @@ function propagate(net::NeuNet, input, activation::Function)
     return layer_actv
 end
 
-function sigmoid(x)
-    return  1.0 / (1.0 + exp(-x))
+function sigmoid(x::T) where T
+    return  one(T) / (one(T) + exp(-x))
 end
 
-function sigmoid_d(x)
+function sigmoid_d(x::T)
     return  (1-sigmoid(x))*sigmoid(x)
 end
 
