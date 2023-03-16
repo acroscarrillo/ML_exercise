@@ -1,7 +1,7 @@
 function label_2_vec(x::Int)
     vec_label = zeros(10)
     vec_label[x+1] = 1
-    return vec_label
+    return Float32.(vec_label)
 end
 
 function MNIST_assess(out, exp)

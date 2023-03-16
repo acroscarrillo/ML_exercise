@@ -11,11 +11,11 @@ N_test = length(testing_set)
 vect_train = [vec(MNIST_half_compress(training_set[i].features)) for i=1:N_train]
 vect_test = [vec(MNIST_half_compress(testing_set[i].features)) for i=1:N_test]
 
-MNIST_net = NeuNet("MNIST network", [14*14,50,10])
+MNIST_net = NeuNet("MNIST network", [14*14,25,10])
 
-alpha = .01
+alpha = .05
 runs = 100
-batch_size = 60
+batch_size = 100
 
 train_ten_d = [ hcat( vect_train[i:i+batch_size-1]... ) for i=1:batch_size:N_train]
 train_ten_l = [ transpose(permutedims( hcat( label_2_vec.( training_set[i:i+batch_size-1].targets )... ))) for i=1:batch_size:N_train] 
