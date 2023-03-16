@@ -14,22 +14,23 @@ function mtl(net::NeuNet)
 end
 
 function NeuNet(name::String, layer_arch::Vector{Int})
-    if length(layer_arch)<2
-        error(string("Neural Net must have at least two neuron layers but ",length(layer_arch)," where given."))
-	end
-    weights = [randn(Float32, (layer_arch[i], layer_arch[i+1])) for i=1:(length(layer_arch)-1)] 
-    biases = [randn(Float32, (layer_arch[i+1])) for i=1:(length(layer_arch)-1)]
+    # if length(layer_arch)<2
+    #     error(string("Neural Net must have at least two neuron layers but ",length(layer_arch)," where given."))
+	# end
+    # weights = [randn(Float32, (layer_arch[i], layer_arch[i+1])) for i=1:(length(layer_arch)-1)] 
+    weights = [randn(Float32, (layer_arch[i], layer_arch[i+1]))/layer_arch[i] for i=1:(length(layer_arch)-1)] 
+
+    # biases = [randn(Float32, (layer_arch[i+1])) for i=1:(length(layer_arch)-1)]
+    biases = [zeros(Float32, layer_arch[i+1]) for i=1:(length(layer_arch)-1)]
 	return NeuNet(name, layer_arch, weights, biases)
 end
 
 function propagate(net::NeuNet, input, activation::Function)
-    if length(input) != net.layer_arch[1]
-        error( string( "Input data of size ",length(input)," is incompatible with input layer of size ",net.layer_arch[1],"." ) )
-    end
-    layer_actv  = [ fill!(similar(input, net.layer_arch[i]), 0.0) for i=1:length(net.layer_arch) ]
-    layer_actv[1] = activation.(input)
+    layer_actv  = [ fill!(similar(input, (net.layer_arch[i]),size(input)[1]), 0.0) for i=1:length(net.layer_arch) ]
+    # layer_actv[1] = activation.(input)
+    layer_actv[1] = input
     for i=1:length(net.layer_arch)-1
-        layer_actv[i+1] = activation.( transpose(net.weights[i])*layer_actv[i] + net.biases[i] )
+        layer_actv[i+1] = activation.( transpose(net.weights[i])*layer_actv[i] .+ net.biases[i] )
     end
     return layer_actv
 end
@@ -38,7 +39,7 @@ function sigmoid(x::T) where T
     return  one(T) / (one(T) + exp(-x))
 end
 
-function sigmoid_d(x::T)
+function sigmoid_d(x) 
     return  (1-sigmoid(x))*sigmoid(x)
 end
 
@@ -46,25 +47,42 @@ function back_prop(net::NeuNet, input, output_e, activation::Function, activatio
     layer_actv = propagate(net,input,activation)
     layer_actv_D = [sigmoid_d.(x) for x in layer_actv]
 
-    grad = transpose( layer_actv[end]- output_e )
-    
+    # grad = transpose( layer_actv[end] - output_e )
+    grad =  layer_actv[end] .- output_e 
+    cost = grad
+    # Del_b = transpose(grad) .* layer_actv_D[end]
+    # net.biases[end]  = net.biases[end] - learning_rate*(Del_b)
 
-    # Del_b = grad*( layer_actv_D[end].*delta_rec( net.layer_arch[end], net.layer_arch[end] ) )
-    Del_b = transpose(grad).*layer_actv_D[end]
-    net.biases[end]  = net.biases[end] - learning_rate*(Del_b)
-    Del_w = transpose(Del_b).*layer_actv[end-1]
-    net.weights[end] = net.weights[end] - learning_rate*(Del_w)
+    Del_b = grad .* layer_actv_D[end]
+    batch_dim = size(Del_b)[2]
+    net.biases[end]  = net.biases[end] .- vec(sum(learning_rate*(Del_b),dims=2))/batch_dim
+
+    # Del_w = transpose(Del_b).*layer_actv[end-1]
+    # net.weights[end] = net.weights[end] - learning_rate*(Del_w)
+    Del_w_ten = [layer_actv[end-1][:,i].*transpose(Del_b[:,i]) for i=1:size(Del_b, 2)]
+    net.weights[end] = net.weights[end] .- learning_rate*(sum(Del_w_ten,dims=1)[1])/batch_dim
+    
+    grad = transpose([grad[:,i] for i in 1:size(grad,2)])
 
     for i=length(net.layer_arch)-2:-1:1
-        grad = grad*(layer_actv_D[i+2].*transpose(net.weights[i+1]))
+        # grad = grad*(layer_actv_D[i+2].*transpose(net.weights[i+1]))
+        tmp = [layer_actv_D[i+2][:,j].*transpose(net.weights[i+1]) for j=1:size(layer_actv_D[i+2],2)]
 
-        # Del_b = grad*(( layer_actv_D[i+1].*delta_rec( size( layer_actv_D[i+1] )...,size( layer_actv_D[i+1] )...)  ) )
-        Del_b = transpose(grad).*layer_actv_D[i+1]
-        net.biases[i]  = net.biases[i] - learning_rate*(Del_b)
+        grad = [ grad[j]*tmp[j] for j=1:length(tmp) ]
+        # Del_b = transpose(grad).*layer_actv_D[i+1]
+        # net.biases[i]  = net.biases[i] - learning_rate*(Del_b)
 
-        Del_w = transpose(Del_b).*layer_actv[i]
-        net.weights[i] = net.weights[i] - learning_rate*(Del_w)
+        Del_b = [transpose(grad[j]) .* layer_actv_D[i+1][:,j] for j=1:length(grad)]
+        
+        net.biases[i]  = net.biases[i] - learning_rate.*sum(Del_b)/batch_dim
+
+        # Del_w = transpose(Del_b).*layer_actv[i]
+        Del_w = [transpose(Del_b[j]).*layer_actv[i][:,j] for j=1:length(Del_b)]
+        
+        net.weights[i] = net.weights[i] - learning_rate.*sum(Del_w)/batch_dim
+        # net.weights[i] = net.weights[i] - learning_rate*(Del_w)
     end
+    return norm(cost)
 end
 
 #this is technically the derivative of the quadratic cost function

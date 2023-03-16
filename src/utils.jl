@@ -4,7 +4,7 @@ function label_2_vec(x::Int)
     return vec_label
 end
 
-function MNIST_assess(out::Vector, exp::Vector)
+function MNIST_assess(out, exp)
     _, ind_out = findmax(out)
     _, ind_exp = findmax(exp)
     if ind_out == ind_exp
@@ -17,7 +17,7 @@ end
 function MNIST_half_compress(matrix_in)
     comp_mat = zeros(14,14)
     for i = 1:14, j = 1:14
-        comp_mat[i,j] = (matrix_in[i,j]+matrix_in[i+1,j]+matrix_in[i,j+1]+matrix_in[i+1,j+1])/4
+        comp_mat[i,j] = (matrix_in[2*i-1,2*j-1]+matrix_in[2*i,2*j-1]+matrix_in[2*i-1,2*j]+matrix_in[2*i,2*j])/4
     end
     return comp_mat
 end

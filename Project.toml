@@ -1,2 +1,4 @@
 [deps]
+Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
+ProgressBars = "49802e3a-d2f1-5c88-81d8-b72133a6f568"
 Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
