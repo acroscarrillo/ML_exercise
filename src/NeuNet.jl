@@ -48,27 +48,28 @@ function back_prop(net::NeuNet, input, output_e, activation::Function, activatio
     layer_actv_D = [sigmoid_d.(x) for x in layer_actv]
 
     # grad = transpose( layer_actv[end] - output_e )
-    grad =  layer_actv[end] .- output_e 
-    cost = grad
-    # Del_b = transpose(grad) .* layer_actv_D[end]
+    grad1 = layer_actv[end] .- output_e 
+    cost = grad1
+    # Del_b = transpose(grad1) .* layer_actv_D[end]
     # net.biases[end]  = net.biases[end] - learning_rate*(Del_b)
 
-    Del_b = grad .* layer_actv_D[end]
-    batch_dim = size(Del_b)[2]
-    net.biases[end]  = net.biases[end] .- vec(sum(learning_rate*(Del_b),dims=2))/batch_dim
+    Del_b1 = grad1 .* layer_actv_D[end]
+    batch_dim = size(Del_b1)[2]
+    net.biases[end]  = net.biases[end] .- vec(sum(learning_rate*(Del_b1),dims=2))/batch_dim
 
-    # Del_w = transpose(Del_b).*layer_actv[end-1]
+    # Del_w = transpose(Del_b1).*layer_actv[end-1]
     # net.weights[end] = net.weights[end] - learning_rate*(Del_w)
-    Del_w_ten = [layer_actv[end-1][:,i].*transpose(Del_b[:,i]) for i=1:size(Del_b, 2)]
+    Del_w_ten = [layer_actv[end-1][:,i].*transpose(Del_b1[:,i]) for i=1:size(Del_b1, 2)]
     net.weights[end] = net.weights[end] .- learning_rate*(sum(Del_w_ten,dims=1)[1])/batch_dim
     
-    grad = transpose([grad[:,i] for i in 1:size(grad,2)])
+    grad = [transpose(grad1[:,i]) for i in 1:size(grad1,2)]
 
     for i=length(net.layer_arch)-2:-1:1
         # grad = grad*(layer_actv_D[i+2].*transpose(net.weights[i+1]))
         tmp = [layer_actv_D[i+2][:,j].*transpose(net.weights[i+1]) for j=1:size(layer_actv_D[i+2],2)]
+        
+        grad .= grad .* tmp
 
-        grad = [ grad[j]*tmp[j] for j=1:length(tmp) ]
         # Del_b = transpose(grad).*layer_actv_D[i+1]
         # net.biases[i]  = net.biases[i] - learning_rate*(Del_b)
 
